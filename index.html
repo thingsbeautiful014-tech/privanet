@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function() {
+        // Suppress errors injected by external Chrome extensions
+        window.addEventListener('error', function(event) {
+          if (event.filename && event.filename.startsWith('chrome-extension://')) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+
+        // Ensure window.fetch has a writable setter for extensions that intercept network requests
+        try {
+          var _origFetch = window.fetch;
+          var _currentFetch = _origFetch;
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return _currentFetch;
+            },
+            set: function(fn) {
+              _currentFetch = fn;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (err) {
+          // Ignore if environment forbids redefinition
+        }
+      })();
+    </script>
+    <title>PrivaNet | Réseau Social Professionnel Confidentiel</title>
+    <meta name="description" content="Découvrez PrivaNet, le réseau social professionnel pseudonyme garantissant une confidentialité totale et un chiffrement de bout en bout." />
+    <meta property="og:title" content="PrivaNet | Réseau Social Professionnel Confidentiel" />
+    <meta property="og:description" content="Découvrez PrivaNet, le réseau social professionnel pseudonyme garantissant une confidentialité totale et un chiffrement de bout en bout." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

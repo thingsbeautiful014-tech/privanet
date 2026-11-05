@@ -1,0 +1,6 @@
+{
+  "name": "PrivaNet",
+  "description": "Réseau social professionnel pseudonyme ultra-confidentiel avec chiffrement de bout en bout (E2EE) et synchronisation en temps réel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

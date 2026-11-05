@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with pseudonym and bio.",
+      "type": "object",
+      "properties": {
+        "pseudonym": { "type": "string", "minLength": 3, "maxLength": 30 },
+        "bio": { "type": "string", "maxLength": 160 },
+        "headline": { "type": "string", "maxLength": 80, "description": "Professional expertise line" },
+        "bannerGradient": { "type": "string", "description": "Selected cover gradient class" },
+        "avatarUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "publicKey": { "type": "string", "description": "Public key for E2EE" }
+      },
+      "required": ["pseudonym", "createdAt"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "A publication which can be text, photo, or video.",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string" },
+        "content": { "type": "string", "maxLength": 1000 },
+        "mediaUrl": { "type": "string" },
+        "mediaType": { "type": "string", "enum": ["text", "image", "video"] },
+        "background": { "type": "string", "description": "CSS class for background gradient" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "repostOf": { "type": "string" },
+        "pseudonym": { "type": "string", "description": "Snapshot of author pseudonym" },
+        "likesCount": { "type": "number", "default": 0 },
+        "commentsCount": { "type": "number", "default": 0 }
+      },
+      "required": ["authorId", "content", "mediaType", "createdAt"]
+    },
+    "Like": {
+      "title": "Like",
+      "description": "Like interaction on a post.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "postId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "postId", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "Comment on a post or another comment.",
+      "type": "object",
+      "properties": {
+        "postId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "pseudonym": { "type": "string" },
+        "content": { "type": "string", "maxLength": 500 },
+        "parentId": { "type": "string", "description": "For nested replies" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["postId", "authorId", "content", "createdAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Private message between two users.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "content": { "type": "string", "description": "Encrypted message content" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "receiverId", "content", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Real-time notification for user interactions.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["like", "repost", "message", "mention"] },
+        "fromUserId": { "type": "string" },
+        "postId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["userId", "type", "fromUserId", "createdAt", "read"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/posts/{postId}": { "schema": "Post", "description": "Global feed posts" },
+    "/posts/{postId}/likes/{likeId}": { "schema": "Like", "description": "Likes on a post" },
+    "/posts/{postId}/comments/{commentId}": { "schema": "Comment", "description": "Comments on a post" },
+    "/messages/{messageId}": { "schema": "Message", "description": "Encrypted private messages" },
+    "/notifications/{notificationId}": { "schema": "Notification", "description": "User notifications" }
+  }
+}

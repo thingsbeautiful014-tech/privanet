@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Health check / connection test
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity Validations
+    function isValidUser(data) {
+      return data.pseudonym is string && data.pseudonym.size() >= 3 && data.pseudonym.size() <= 30
+        && (data.get('bio', '') is string && data.get('bio', '').size() <= 160)
+        && data.createdAt == request.time;
+    }
+
+    function isValidPost(data) {
+      return data.authorId == request.auth.uid
+        && data.content is string && data.content.size() <= 2000
+        && data.mediaType in ['text', 'image', 'video']
+        && (data.get('background', null) == null || data.background is string)
+        && (data.get('mediaUrl', null) == null || data.mediaUrl is string)
+        && (data.get('repostOf', null) == null || data.repostOf is string)
+        && (data.get('originalAuthor', null) == null || data.originalAuthor is string)
+        && (data.get('pseudonym', null) == null || data.pseudonym is string)
+        && data.createdAt == request.time;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['pseudonym', 'bio', 'avatarUrl', 'publicKey', 'headline', 'bannerGradient'])
+      );
+    }
+
+    // Posts Collection
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidPost(incoming());
+      allow update: if isSignedIn() && (
+        (existing().authorId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'mediaUrl', 'updatedAt', 'background', 'repostOf', 'originalAuthor'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'commentsCount', 'repostsCount']))
+      );
+      allow delete: if isSignedIn() && (existing().authorId == request.auth.uid || existing().get('authorId', '') == request.auth.uid);
+
+      // Likes subcollection (keyed by userId)
+      match /likes/{userId} {
+        allow read: if isSignedIn();
+        allow create, update: if isSignedIn() && request.auth.uid == userId;
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      // Comments subcollection
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && incoming().authorId == request.auth.uid;
+        allow update: if isSignedIn() && existing().authorId == request.auth.uid && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['content', 'updatedAt'])
+        );
+        allow delete: if isSignedIn() && (existing().authorId == request.auth.uid || get(/databases/$(database)/documents/posts/$(postId)).data.authorId == request.auth.uid);
+      }
+    }
+
+    // Messages Collection (E2EE)
+    match /messages/{messageId} {
+      allow read: if isSignedIn() && (existing().senderId == request.auth.uid || existing().receiverId == request.auth.uid);
+      allow create: if isSignedIn() && incoming().senderId == request.auth.uid;
+    }
+
+    // Notifications Collection
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['read'])
+      );
+    }
+  }
+}
